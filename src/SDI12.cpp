@@ -7,7 +7,7 @@ any additional hardware.
 ======================== Attribution & License =============================
 
 Copyright (C) 2013  Stroud Water Research Center
-Available at https://github.com/StroudCenter/Arduino-SDI-12
+Available at https://github.com/EnviroDIY/Arduino-SDI-12
 
 Authored initially in August 2013 by:
 
@@ -74,11 +74,11 @@ Data Line:                         SDI-12 communication uses a single
 
     LINE CONDITION    |  BINARY STATE | VOLTAGE RANGE
     -----------------------------------------------
-    marking                1                -0.5 to 1.0 volts
-    spacing                0                3.5 to 5.5 volts
-    transition            undefined        1.0 to 3.5 volts
+    marking                1              -0.5 to 1.0 volts
+    spacing                0               3.5 to 5.5 volts
+    transition          undefined          1.0 to 3.5 volts
 
-      _____       _____          _____       _____       _____     spacing
+      _____       _____       _____       _____       _____     spacing
 5v   |     |     |     |     |     |     |     |     |     |
      |  0  |  1  |  0  |  1  |  0  |  1  |  0  |  1  |  0  | transition
 Ov___|     |_____|     |_____|     |_____|     |_____|     |___ marking
@@ -132,8 +132,6 @@ SDI-12.org, official site of the SDI-12 Support Group.
 int TIMEOUT = -9999;                 // 0.9 value to return to indicate TIMEOUT
 
 SDI12 *SDI12::_activeObject = NULL;  // 0.10 pointer to active SDI12 object
-uint8_t _dataPin;                    // 0.11 reference to the data pin
-bool _bufferOverflow;                // 0.12 buffer overflow status
 
 
 // 0.13 Parity bit calcuations
@@ -181,6 +179,7 @@ buffer tail. (unsigned 8-bit integer, can map from 0-255)
 char _rxBuffer[_BUFFER_SIZE];     // 1.2 - buff for incoming
 uint8_t _rxBufferHead = 0;        // 1.3 - index of buff head
 uint8_t _rxBufferTail = 0;        // 1.4 - index of buff tail
+
 
 /* =========== 2. Data Line States ===============================
 
@@ -417,26 +416,31 @@ const char *SDI12::getStateName(uint8_t state)
 }
 // 2.1 - sets the state of the SDI-12 object.
 void SDI12::setState(uint8_t state){
+
+  IO_REG_TYPE mask = bitmask;
+  volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
+
   if(state == HOLDING){
-    pinMode(_dataPin,OUTPUT);
-    digitalWrite(_dataPin,LOW);
+    DIRECT_MODE_OUTPUT(reg, mask);
+    DIRECT_WRITE_LOW(reg, mask);
     *digitalPinToPCMSK(_dataPin) &= ~(1<<digitalPinToPCMSKbit(_dataPin));
     return;
   }
   if(state == TRANSMITTING){
-    pinMode(_dataPin,OUTPUT);
+    DIRECT_MODE_OUTPUT(reg, mask);
     noInterrupts();             // supplied by Arduino.h, same as cli()
     return;
   }
   if(state == LISTENING) {
-    digitalWrite(_dataPin,LOW);
-    pinMode(_dataPin,INPUT);
+    DIRECT_WRITE_LOW(reg, mask);
+    DIRECT_MODE_INPUT(reg, mask);
     interrupts();                // supplied by Arduino.h, same as sei()
     *digitalPinToPCICR(_dataPin) |= (1<<digitalPinToPCICRbit(_dataPin));
     *digitalPinToPCMSK(_dataPin) |= (1<<digitalPinToPCMSKbit(_dataPin));
-  } else {                         // implies state==DISABLED
-      digitalWrite(_dataPin,LOW);
-      pinMode(_dataPin,INPUT);
+  }
+  else {                         // implies state==DISABLED
+      DIRECT_WRITE_LOW(reg, mask);
+      DIRECT_MODE_INPUT(reg, mask);
       *digitalPinToPCMSK(_dataPin) &= ~(1<<digitalPinToPCMSKbit(_dataPin));
       if(!*digitalPinToPCMSK(_dataPin)){
           *digitalPinToPCICR(_dataPin) &= ~(1<<digitalPinToPCICRbit(_dataPin));
@@ -458,8 +462,10 @@ void SDI12::forceListen(){
 
 3.1 - The constructor requires a single parameter: the pin to be used
 for the data line. When the constructor is called it resets the buffer
-overflow status to FALSE and assigns the pin number "dataPin" to the
-private variable "_dataPin".
+overflow status to FALSE, assigns the pin number "dataPin" to the
+private variable "_dataPin", assigns the bit mask of the data pin as the
+private variable "bitmask", and assigns the base register of the data pin as
+the private variable "baseReg".
 
 3.2 - When the destructor is called, it's main task is to disable any
 interrupts that had been previously assigned to the pin, so that the pin
@@ -478,7 +484,12 @@ destructor, as it will maintain the memory buffer.
 */
 
 //  3.1 Constructor
-SDI12::SDI12(uint8_t dataPin){ _bufferOverflow = false; _dataPin = dataPin; }
+SDI12::SDI12(uint8_t dataPin){
+  _bufferOverflow = false;
+  _dataPin = dataPin;
+  bitmask = PIN_TO_BITMASK(dataPin);
+  baseReg = PIN_TO_BASEREG(dataPin);
+}
 
 //  3.2 Destructor
 SDI12::~SDI12(){ setState(DISABLED); }
@@ -542,10 +553,10 @@ If the result of (out & mask) determines whether a 1 or 0 should be sent.
 Again, here inverse logic may lead to easy confusion.
 
 if(out & mask){
-      digitalWrite(_dataPin, LOW);
+      DIRECT_WRITE_LOW(reg, mask);
     }
     else{
-      digitalWrite(_dataPin, HIGH);
+      DIRECT_WRITE_HIGH(reg, mask);
     }
 
 + 4.2.4 - Send the stop bit. The stop bit is always a '1', so we simply
@@ -561,33 +572,38 @@ sends out an 8.33 ms marking and a String byte by byte the command line.
 
 // 4.1 - this function wakes up the entire sensor bus
 void SDI12::wakeSensors(){
+  IO_REG_TYPE mask = bitmask;
+  volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
+
   setState(TRANSMITTING);
-  digitalWrite(_dataPin, HIGH);
+  DIRECT_WRITE_HIGH(reg, mask);
   delayMicroseconds(12100);  // Required break of 12 milliseconds
-  digitalWrite(_dataPin, LOW);
+  DIRECT_WRITE_LOW(reg, mask);
   delayMicroseconds(8400);  // Required marking of 8.33 milliseconds
 }
 
 // 4.2 - this function writes a character out on the data line
 void SDI12::writeChar(uint8_t out)
 {
+  IO_REG_TYPE mask = bitmask;
+  volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
 
   out |= (parity_even_bit(out)<<7);          // 4.2.1 - parity bit
 
-  digitalWrite(_dataPin, HIGH);              // 4.2.2 - start bit
+  DIRECT_WRITE_HIGH(reg, mask);              // 4.2.2 - start bit
   delayMicroseconds(SPACING);
 
   for (byte mask = 0x01; mask; mask<<=1){    // 4.2.3 - send payload
     if(out & mask){
-      digitalWrite(_dataPin, LOW);
+      DIRECT_WRITE_LOW(reg, mask);
     }
     else{
-      digitalWrite(_dataPin, HIGH);
+      DIRECT_WRITE_HIGH(reg, mask);
     }
     delayMicroseconds(SPACING);
   }
 
-  digitalWrite(_dataPin, LOW);                // 4.2.4 - stop bit
+  DIRECT_WRITE_LOW(reg, mask);                // 4.2.4 - stop bit
   delayMicroseconds(SPACING);
 }
 
@@ -623,8 +639,10 @@ void SDI12::sendCommand(FlashString cmd)
 //          of String resp, one by one (for slave)
 void SDI12::sendResponse(String &resp)
 {
+  IO_REG_TYPE mask = bitmask;
+  volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
   setState(TRANSMITTING);       // 8.33 ms marking before response
-  digitalWrite(_dataPin, LOW);
+  DIRECT_WRITE_LOW(reg, mask);
   delayMicroseconds(8330);
   for (int unsigned i = 0; i < resp.length(); i++){
     writeChar(resp[i]);         // write each character
@@ -634,8 +652,10 @@ void SDI12::sendResponse(String &resp)
 
 void SDI12::sendResponse(const char *resp)
 {
+  IO_REG_TYPE mask = bitmask;
+  volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
   setState(TRANSMITTING);       // 8.33 ms marking before response
-  digitalWrite(_dataPin, LOW);
+  DIRECT_WRITE_LOW(reg, mask);
   delayMicroseconds(8330);
   for (int unsigned i = 0; i < strlen(resp); i++){
     writeChar(resp[i]);         // write each character
@@ -645,8 +665,10 @@ void SDI12::sendResponse(const char *resp)
 
 void SDI12::sendResponse(FlashString resp)
 {
+  IO_REG_TYPE mask = bitmask;
+  volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
   setState(TRANSMITTING);       // 8.33 ms marking before response
-  digitalWrite(_dataPin, LOW);
+  DIRECT_WRITE_LOW(reg, mask);
   delayMicroseconds(8330);
   for (int unsigned i = 0; i < strlen_P((PGM_P)resp); i++){
     writeChar((char)pgm_read_byte((const char *)resp + i));  // write each character
@@ -885,7 +907,7 @@ void SDI12::receiveChar()
 {
   if (digitalRead(_dataPin))                // 7.2.1 - Start bit?
   {
-      uint8_t newChar = 0;                  // 7.2.2 - Make room for char.
+    uint8_t newChar = 0;                    // 7.2.2 - Make room for char.
 
     delayMicroseconds(SPACING/2);           // 7.2.3 - Wait 1/2 SPACING
 
