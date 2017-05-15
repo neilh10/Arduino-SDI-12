@@ -94,7 +94,7 @@ SDI-12.org, official site of the SDI-12 Support Group.
 2.    Data Line States, Overview of Interrupts
 3.    Constructor, Destructor, SDI12.begin(), and SDI12.end()
 4.  Waking up, and talking to, the sensors.
-5.    Reading from the SDI-12 object. available(), peek(), read(), flush()
+5.    Reading from the SDI-12 object. available(), peek(), read(), clearBuffer()
 6.     Using more than one SDI-12 object, isActive() and setActive().
 7.    Interrupt Service Routine (getting the data into the buffer)
 
@@ -567,6 +567,8 @@ wakes sensors and sends out a String byte by byte the command line.
 
 4.4 - sendResponse(String resp) is a publicly accessible function that
 sends out an 8.33 ms marking and a String byte by byte the command line.
+This is needed if the Arduino is acting as an SDI-12 device itself, not as a
+recorder for another SDI-12 device
 
 */
 
@@ -635,45 +637,46 @@ void SDI12::sendCommand(FlashString cmd)
   setState(LISTENING);      // listen for reply
 }
 
-//  4.4 - this function sets up for a response, then sends out the characters
-//          of String resp, one by one (for slave)
+//  4.4 - this function sets up for a response to a separate data recorder by
+//        sending out a marking and then sending out the characters of resp
+//        one by one (for slave-side use)
 void SDI12::sendResponse(String &resp)
 {
   IO_REG_TYPE mask = bitmask;
   volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
-  setState(TRANSMITTING);       // 8.33 ms marking before response
+  setState(TRANSMITTING);
   DIRECT_WRITE_LOW(reg, mask);
-  delayMicroseconds(8330);
+  delayMicroseconds(8330);  // 8.33 ms marking before response
   for (int unsigned i = 0; i < resp.length(); i++){
-    writeChar(resp[i]);         // write each character
+    writeChar(resp[i]);     // write each character
   }
-  setState(LISTENING);          // return to listening state
+  setState(LISTENING);      // return to listening state
 }
 
 void SDI12::sendResponse(const char *resp)
 {
   IO_REG_TYPE mask = bitmask;
   volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
-  setState(TRANSMITTING);       // 8.33 ms marking before response
+  setState(TRANSMITTING);
   DIRECT_WRITE_LOW(reg, mask);
-  delayMicroseconds(8330);
+  delayMicroseconds(8330);  // 8.33 ms marking before response
   for (int unsigned i = 0; i < strlen(resp); i++){
-    writeChar(resp[i]);         // write each character
+    writeChar(resp[i]);     // write each character
   }
-  setState(LISTENING);         // return to listening state
+  setState(LISTENING);      // return to listening state
 }
 
 void SDI12::sendResponse(FlashString resp)
 {
   IO_REG_TYPE mask = bitmask;
   volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
-  setState(TRANSMITTING);       // 8.33 ms marking before response
+  setState(TRANSMITTING);
   DIRECT_WRITE_LOW(reg, mask);
-  delayMicroseconds(8330);
+  delayMicroseconds(8330);  // 8.33 ms marking before response
   for (int unsigned i = 0; i < strlen_P((PGM_P)resp); i++){
     writeChar((char)pgm_read_byte((const char *)resp + i));  // write each character
   }
-  setState(LISTENING);          // return to listening state
+  setState(LISTENING);      // return to listening state
 }
 
 /* ============= 5. Reading from the SDI-12 object.  ===================
@@ -718,7 +721,7 @@ character that is at the head of the buffer. Unlike read() it does not
 consume the character (i.e. the index addressed by _rxBufferHead is not
 changed). peek() returns -1 if there are no characters to show.
 
-5.3 - flush() is a public function that clears the buffers contents by
+5.3 - clearBuffer() is a public function that clears the buffers contents by
 setting the index for both head and tail back to zero.
 
 5.4 - read() returns the character at the current head in the buffer
@@ -753,8 +756,7 @@ int SDI12::peek()
 
 // 5.3 - a public function that clears the buffer contents and
 // resets the status of the buffer overflow.
-// TODO:  Correct this to wait for sending to complete instead of emptying buffer
-void SDI12::flush()
+void SDI12::clearBuffer()
 {
   _rxBufferHead = _rxBufferTail = 0;
   _bufferOverflow = false;
@@ -905,7 +907,10 @@ inline void SDI12::handleInterrupt(){
 // 7.2 - Quickly reads a new character into the buffer.
 void SDI12::receiveChar()
 {
-  if (digitalRead(_dataPin))                // 7.2.1 - Start bit?
+  IO_REG_TYPE mask=bitmask;
+  volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
+
+  if (DIRECT_READ(reg, mask))                // 7.2.1 - Start bit?
   {
     uint8_t newChar = 0;                    // 7.2.2 - Make room for char.
 
@@ -915,7 +920,7 @@ void SDI12::receiveChar()
     {
       delayMicroseconds(SPACING);
       uint8_t noti = ~i;
-      if (!digitalRead(_dataPin))
+      if (!DIRECT_READ(reg, mask))
         newChar |= i;
       else
         newChar &= noti;
