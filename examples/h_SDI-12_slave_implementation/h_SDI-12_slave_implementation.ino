@@ -177,7 +177,7 @@ void loop() {
   // iteration to a static char buffer; however, the SDI-12 spec requires a precise
   // response time, and this method is invariant to the remaining loop() contents.
   int avail = slaveSDI12.available();
-  if (avail < 0) { slaveSDI12.clearBuffer(); } // Buffer full; clearBuffer
+  if (avail < 0) { slaveSDI12.clearBuffer(); } // Buffer is full; clear
   else if (avail > 0) {
     for(int a = 0; a < avail; a++){
       char charReceived = slaveSDI12.read();

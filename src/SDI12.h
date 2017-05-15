@@ -7,7 +7,7 @@ any additional hardware.
 ======================== Attribution & License =============================
 
 Copyright (C) 2013  Stroud Water Research Center
-Available at https://github.com/StroudCenter/Arduino-SDI-12
+Available at https://github.com/EnvirDIY/Arduino-SDI-12
 
 Authored initially in August 2013 by:
 

@@ -639,12 +639,13 @@ void SDI12::sendCommand(FlashString cmd)
 
 //  4.4 - this function sets up for a response to a separate data recorder by
 //        sending out a marking and then sending out the characters of resp
-//        one by one (for slave-side use)
+//        one by one (for slave-side use, that is, when the Arduino itself is
+//        acting as an SDI-12 device rather than a recorder).
 void SDI12::sendResponse(String &resp)
 {
   IO_REG_TYPE mask = bitmask;
   volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
-  setState(TRANSMITTING);
+  setState(TRANSMITTING);   // Get ready to send data to the recorder
   DIRECT_WRITE_LOW(reg, mask);
   delayMicroseconds(8330);  // 8.33 ms marking before response
   for (int unsigned i = 0; i < resp.length(); i++){
@@ -657,7 +658,7 @@ void SDI12::sendResponse(const char *resp)
 {
   IO_REG_TYPE mask = bitmask;
   volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
-  setState(TRANSMITTING);
+  setState(TRANSMITTING);   // Get ready to send data to the recorder
   DIRECT_WRITE_LOW(reg, mask);
   delayMicroseconds(8330);  // 8.33 ms marking before response
   for (int unsigned i = 0; i < strlen(resp); i++){
@@ -670,7 +671,7 @@ void SDI12::sendResponse(FlashString resp)
 {
   IO_REG_TYPE mask = bitmask;
   volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
-  setState(TRANSMITTING);
+  setState(TRANSMITTING);   // Get ready to send data to the recorder
   DIRECT_WRITE_LOW(reg, mask);
   delayMicroseconds(8330);  // 8.33 ms marking before response
   for (int unsigned i = 0; i < strlen_P((PGM_P)resp); i++){
