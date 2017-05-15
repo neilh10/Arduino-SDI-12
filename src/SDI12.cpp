@@ -233,7 +233,7 @@ relinquish control of the data line when not transmitting.
 ------------------------|  Overview of Interrupts |-------------------------
 
 Some vocabulary:
-Registers: PCMSK0, PCMSK1, PCMSK2 :registers that enable or disable
+Registers: PCMSK0, PCMSK1, PCMSK2, PCMSK3, etc : registers that enable or disable
 pin-change interrupts on individual pins
 
 PCICR : a register where the three least significant bits enable or
@@ -318,7 +318,7 @@ operator '|'. We will use the compact '|=' notation which does the
 operation and then stores the result back into the left hand side.
 
 So the operation:
-*digitalPinToPCMSK(_dataPin) |= (1<<digitalPinToPCMSKbit(9));
+*digitalPinToPCMSK(9) |= (1<<digitalPinToPCMSKbit(9));
 
 Accomplishes:
     (1<<digitalPinToPCMSKbit(9))              {00000010}
@@ -415,8 +415,8 @@ const char *SDI12::getStateName(uint8_t state)
     return retval;
 }
 // 2.1 - sets the state of the SDI-12 object.
-void SDI12::setState(uint8_t state){
-
+void SDI12::setState(uint8_t state)
+{
   IO_REG_TYPE mask = bitmask;
   volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
 
@@ -645,6 +645,7 @@ void SDI12::sendResponse(String &resp)
 {
   IO_REG_TYPE mask = bitmask;
   volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
+
   setState(TRANSMITTING);   // Get ready to send data to the recorder
   DIRECT_WRITE_LOW(reg, mask);
   delayMicroseconds(8330);  // 8.33 ms marking before response
@@ -658,6 +659,7 @@ void SDI12::sendResponse(const char *resp)
 {
   IO_REG_TYPE mask = bitmask;
   volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
+
   setState(TRANSMITTING);   // Get ready to send data to the recorder
   DIRECT_WRITE_LOW(reg, mask);
   delayMicroseconds(8330);  // 8.33 ms marking before response
@@ -671,6 +673,7 @@ void SDI12::sendResponse(FlashString resp)
 {
   IO_REG_TYPE mask = bitmask;
   volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
+
   setState(TRANSMITTING);   // Get ready to send data to the recorder
   DIRECT_WRITE_LOW(reg, mask);
   delayMicroseconds(8330);  // 8.33 ms marking before response
