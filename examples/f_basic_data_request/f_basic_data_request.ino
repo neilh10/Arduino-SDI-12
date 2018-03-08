@@ -2,11 +2,12 @@
 Example F: Basic data request.
 Edited by Ruben Kertesz for ISCO Nile 502 2/10/2016
 This is a simple demonstration of the SDI-12 library for Arduino.
+
 This is a very basic (stripped down) example where the user initiates a measurement
 and receives the results to a terminal window without typing numerous commands into
 the terminal.
 The SDI-12 specification is available at: http://www.sdi-12.org/
-The library is available at: https://github.com/StroudCenter/Arduino-SDI-12
+The library is available at: https://github.com/EnviroDIY/Arduino-SDI-12
 The forked library with additional example files is available at: https://github.com/rkertesz/Arduino-SDI-12
 The circuit: You should not have more than one SDI-12 device attached for this example.
 See:
@@ -20,19 +21,34 @@ Contact: github@emnet.net or @rinnamon on twitter
 */
 
 
-#include "SDI12.h"
+#include <SDI12.h>
 
-#define DATAPIN 12         // change to the proper pin
+#define SERIAL_BAUD 57600  // The baud rate for the output serial port
+#define DATA_PIN 7         // The pin of the SDI-12 data bus
+#define POWER_PIN 22       // The sensor power pin (or -1 if not switching power)
 #define SENSOR_ADDRESS 1
 
-SDI12 mySDI12(DATAPIN);
+// Define the SDI-12 bus
+SDI12 mySDI12(DATA_PIN);
 
 String sdiResponse = "";
 String myCommand = "";
 
-void setup() {
-  Serial.begin(9600);
+void setup(){
+  Serial.begin(SERIAL_BAUD);
+  while(!Serial);
+
+  Serial.println("Opening SDI-12 bus...");
   mySDI12.begin();
+  delay(500); // allow things to settle
+
+  // Power the sensors;
+  if(POWER_PIN > 0){
+    Serial.println("Powering up sensors...");
+    pinMode(POWER_PIN, OUTPUT);
+    digitalWrite(POWER_PIN, HIGH);
+    delay(200);
+  }
 }
 
 void loop() {

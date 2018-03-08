@@ -51,33 +51,25 @@
  Contact: SDI12@ethosengineering.org
 
  The SDI-12 specification is available at: http://www.sdi-12.org/
- The library is available at: https://github.com/StroudCenter/Arduino-SDI-12
+ The library is available at: https://github.com/EnviroDIY/Arduino-SDI-12
 */
 
 
-#include "SDI12.h"
+#include <SDI12.h>
 
+#define SERIAL_BAUD 57600  // The baud rate for the output serial port
+#define POWER_PIN 22       // The sensor power pin (or -1 if not switching power)
+#define FirstPin 5      // change to lowest pin number on your board
+#define LastPin 24       // change to highest pin number on your board
 
-#include "SDI12.h"
-
-#define POWERPIN -1     // change to the proper pin (or -1 if not switching power)
-#define FirstPin 2      // change to lowest pin number on your board
-#define LastPin 23       // change to highest pin number on your board
 
 // gets identification information from a sensor, and prints it to the serial port
 // expects a character between '0'-'9', 'a'-'z', or 'A'-'Z'.
 void printInfo(SDI12 sdi, char i){
-  int j;
   String command = "";
   command += (char) i;
   command += "I!";
-  for(j = 0; j < 1; j++){
-    sdi.sendCommand(command);
-    sdi.clearBuffer();
     delay(30);
-    if(sdi.available()>1) break;
-    if(sdi.available()) sdi.read();
-  }
 
   Serial.print("  --");
   Serial.print(i);
@@ -126,17 +118,20 @@ void scanAddressSpace(SDI12 sdi){
 }
 
 void setup(){
-  Serial.begin(57600);
+  Serial.begin(SERIAL_BAUD);
   Serial.println("//\n// Start Search for SDI-12 Devices \n// -----------------------");
 
   // Power the sensors;
-  pinMode(POWERPIN, OUTPUT);
-  digitalWrite(POWERPIN, HIGH);
-  delay(1000);
+  if(POWER_PIN > 0){
+    Serial.println("Powering up sensors...");
+    pinMode(POWER_PIN, OUTPUT);
+    digitalWrite(POWER_PIN, HIGH);
+    delay(200);
+  }
 
-  for (uint8_t pin = FirstPin; pin < LastPin; pin++)
+  for (uint8_t pin = FirstPin; pin <= LastPin; pin++)
   {
-    if (pin != POWERPIN){
+    if (pin != POWER_PIN){
       pinMode(pin, INPUT);
       SDI12 mySDI12(pin);
       mySDI12.begin();
@@ -151,7 +146,7 @@ void setup(){
   Serial.println("\n//\n// End Search for SDI-12 Devices \n// ---------------------");
 
   // Cut power
-  digitalWrite(POWERPIN, LOW);
+  digitalWrite(POWER_PIN, LOW);
 
 }
 

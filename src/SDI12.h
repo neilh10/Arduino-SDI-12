@@ -7,12 +7,17 @@ any additional hardware.
 ======================== Attribution & License =============================
 
 Copyright (C) 2013  Stroud Water Research Center
-Available at https://github.com/EnvirDIY/Arduino-SDI-12
+Available at https://github.com/EnviroDIY/Arduino-SDI-12
 
 Authored initially in August 2013 by:
 
         Kevin M. Smith (http://ethosengineering.org)
         Inquiries: SDI12@ethosengineering.org
+
+Modified 2017 by Manuel Jimenez Buendia to work with ARM based processors
+(Arduino Zero)
+
+Maintenance and merging 2017 by Sara Damiano
 
 based on the SoftwareSerial library (formerly NewSoftSerial), authored by:
         ladyada (http://ladyada.net)
@@ -34,13 +39,31 @@ Lesser General Public License for more details.
 You should have received a copy of the GNU Lesser General Public
 License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
+
+================== Notes on Various Arduino-Type Processors ====================
+
+This library requires the use of pin change interrupts (PCINT).
+
+Not all Arduino boards have the same pin capabilities.
+The known compatibile pins for common variants are shown below.
+
+Arduino Uno: 	All pins.
+Arduino Mega or Mega 2560:
+10, 11, 12, 13, 14, 15, 50, 51, 52, 53, A8 (62),
+A9 (63), A10 (64), A11 (65), A12 (66), A13 (67), A14 (68), A15 (69).
+
+Arduino Leonardo:
+8, 9, 10, 11, 14 (MISO), 15 (SCK), 16 (MOSI)
+
+Arduino Zero:
+Any pin except 4
 */
 
 #ifndef SDI12_h
 #define SDI12_h
 
     //  Import Required Libraries
-#include <avr/interrupt.h>      // interrupt handling
 #include <inttypes.h>           // integer types library
 #include <Arduino.h>            // Arduino core library
 #include <Stream.h>             // Arduino Stream library
@@ -252,7 +275,7 @@ void directWriteHigh(volatile IO_REG_TYPE *base, IO_REG_TYPE pin)
 class SDI12 : public Stream
 {
 protected:
-  int peekNextDigit();            // override of Stream equivalent to allow custom TIMEOUT
+  int peekNextDigit();            // override of Stream equivalent to allow custom value to be returned on timeout
 private:
   uint8_t _dataPin;               // for the data pin
   IO_REG_TYPE bitmask;            // for the bit mask of the data pin
@@ -271,12 +294,16 @@ private:
     static uint8_t parity_even_bit(uint8_t v);
   #endif
 
+  uint8_t _dataPin;               // reference to the data pin
+  bool _bufferOverflow;           // buffer overflow status
+
 public:
-  int TIMEOUT;
-  SDI12(uint8_t dataPin);        // constructor
-  ~SDI12();                      // destructor
-  void begin();                  // enable SDI-12 object
-  void end();                    // disable SDI-12 object
+  SDI12(uint8_t dataPin);           // constructor
+  ~SDI12();                         // destructor
+  void begin();                     // enable SDI-12 object
+  void end();                       // disable SDI-12 object
+  void setTimeoutValue(int value);  // sets the value to return if a parse int or parse float times out
+  int timeoutValue;                 // value to return if a parse times out
 
   void forceHold();                     // sets line state to HOLDING
   void forceListen();                   // sets line state to LISTENING
@@ -297,7 +324,10 @@ public:
   bool setActive();         // set this instance as the active SDI-12 instance
   bool isActive();          // check if this instance is active
 
-  static inline void handleInterrupt();  // intermediary used by the ISR
+  static void handleInterrupt();  // intermediary used by the ISR
+
+  // #define SDI12_EXTERNAL_PCINT  // uncomment to use your own PCINT ISRs
+
 };
 
-#endif
+#endif  // SDI12_h
