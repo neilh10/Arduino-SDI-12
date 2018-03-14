@@ -280,8 +280,8 @@ const char *SDI12::getStateName(uint8_t state)
 // 2.3 - sets the state of the SDI-12 object.
 void SDI12::setState(uint8_t state)
 {
-    IO_REG_TYPE mask IO_REG_MASK_ATTR = bitmask;
-    volatile IO_REG_TYPE *reg IO_REG_BASE_ATTR = baseReg;
+  IO_REG_TYPE mask IO_REG_MASK_ATTR = bitmask;
+  volatile IO_REG_TYPE *reg IO_REG_BASE_ATTR = baseReg;
 
   if(state == HOLDING){
     DIRECT_MODE_OUTPUT(reg, mask);  // Pin mode = output
