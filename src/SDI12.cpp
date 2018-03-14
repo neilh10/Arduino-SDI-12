@@ -277,41 +277,53 @@ const char *SDI12::getStateName(uint8_t state)
     }
     return retval;
 }
-// 2.1 - sets the state of the SDI-12 object.
+// 2.3 - sets the state of the SDI-12 object.
 void SDI12::setState(uint8_t state)
 {
     IO_REG_TYPE mask IO_REG_MASK_ATTR = bitmask;
     volatile IO_REG_TYPE *reg IO_REG_BASE_ATTR = baseReg;
 
   if(state == HOLDING){
-    DIRECT_MODE_OUTPUT(reg, mask);
-    DIRECT_WRITE_LOW(reg, mask);
-    *digitalPinToPCMSK(_dataPin) &= ~(1<<digitalPinToPCMSKbit(_dataPin));
+    DIRECT_MODE_OUTPUT(reg, mask);  // Pin mode = output
+    DIRECT_WRITE_LOW(reg, mask);    // Pin state = low
+    #if defined __AVR__
+      *digitalPinToPCMSK(_dataPin) &= ~(1<<digitalPinToPCMSKbit(_dataPin));  // Disable interrupts on the specific pin of interest
+      if(!*digitalPinToPCMSK(_dataPin)){  // If there are no other pins on the register left with enabled interrupts, disable the whole register
+          *digitalPinToPCICR(_dataPin) &= ~(1<<digitalPinToPCICRbit(_dataPin));
+       }
+    #else
+      detachInterrupt(digitalPinToInterrupt(_dataPin));  // Merely need to detach the interrupt function from the pin
+    #endif
     return;
   }
   if(state == TRANSMITTING){
-    DIRECT_MODE_OUTPUT(reg, mask);
-    noInterrupts();             // supplied by Arduino.h, same as cli()
+    DIRECT_MODE_OUTPUT(reg, mask);  // Pin mode = output
+    noInterrupts();                 // _ALL_ interrupts disabled
     return;
   }
   if(state == LISTENING) {
-    DIRECT_WRITE_LOW(reg, mask);
-    DIRECT_MODE_INPUT(reg, mask);
-    interrupts();                // supplied by Arduino.h, same as sei()
+    DIRECT_WRITE_LOW(reg, mask);   // Pin state = low
+    DIRECT_MODE_INPUT(reg, mask);  // Pin mode = input
+    interrupts();                  // Enable interrupts
     #if defined __AVR__
-      *digitalPinToPCICR(_dataPin) |= (1<<digitalPinToPCICRbit(_dataPin));
-      *digitalPinToPCMSK(_dataPin) |= (1<<digitalPinToPCMSKbit(_dataPin));
+      *digitalPinToPCICR(_dataPin) |= (1<<digitalPinToPCICRbit(_dataPin));  // Enable interrupts on the register with the pin of interest
+      *digitalPinToPCMSK(_dataPin) |= (1<<digitalPinToPCMSKbit(_dataPin));  // Enable interrupts on the specific pin of interest
+      // The interrupt function is actually attached to the interrupt way down in section 7.3
     #else
-      attachInterrupt(digitalPinToInterrupt(_dataPin),handleInterrupt, CHANGE);
+      attachInterrupt(digitalPinToInterrupt(_dataPin),handleInterrupt, CHANGE);  // Merely need to attach the interrupt function to the pin
     #endif
   }
-  else {                         // implies state==DISABLED
-      DIRECT_WRITE_LOW(reg, mask);
-      DIRECT_MODE_INPUT(reg, mask);
-      *digitalPinToPCMSK(_dataPin) &= ~(1<<digitalPinToPCMSKbit(_dataPin));
-      if(!*digitalPinToPCMSK(_dataPin)){
-          *digitalPinToPCICR(_dataPin) &= ~(1<<digitalPinToPCICRbit(_dataPin));
-      }
+  else {  // implies state==DISABLED
+      DIRECT_WRITE_LOW(reg, mask);   // Pin state = low
+      DIRECT_MODE_INPUT(reg, mask);  // Pin mode = input
+      #if defined __AVR__
+        *digitalPinToPCMSK(_dataPin) &= ~(1<<digitalPinToPCMSKbit(_dataPin));  // Disable interrupts on the specific pin of interest
+        if(!*digitalPinToPCMSK(_dataPin)){  // If there are no other pins on the register left with enabled interrupts, disable the whole register
+            *digitalPinToPCICR(_dataPin) &= ~(1<<digitalPinToPCICRbit(_dataPin));
+         }
+       #else
+         detachInterrupt(digitalPinToInterrupt(_dataPin));  // Merely need to detach the interrupt function from the pin
+       #endif
   }
 }
 
@@ -330,9 +342,10 @@ void SDI12::forceListen(){
 3.1 - The constructor requires a single parameter: the pin to be used
 for the data line. When the constructor is called it resets the buffer
 overflow status to FALSE, assigns the pin number "dataPin" to the
-private variable "_dataPin", assigns the bit mask of the data pin as the
-private variable "bitmask", and assigns the base register of the data pin as
-the private variable "baseReg".
+private variable "_dataPin", assigns the I/O bit mask of the data pin as the
+private variable "bitmask", and assigns the base I/O register of the data pin as
+the private variable "baseReg".  NOTE:  the I/O registers and masks are different
+from the interrupt registers and masks.
 
 3.2 - When the destructor is called, it's main task is to disable any
 interrupts that had been previously assigned to the pin, so that the pin
