@@ -139,8 +139,9 @@ SDI-12.org, official site of the SDI-12 Support Group.
 */
 
 #include "SDI12.h"                   // 0.1 header file for this library
+#include "util/OneWire_direct_gpio.h"  // Board-specific macros for direct GPIO
 
-#define _BUFFER_SIZE 64              // 0.2 max RX buffer size
+#define SDI12_BUFFER_SIZE 64         // 0.2 max RX buffer size
 #define DISABLED 0                   // 0.3 value for DISABLED state
 #define ENABLED 1                    // 0.4 value for ENABLED state
 #define HOLDING 2                    // 0.5 value for DISABLED state
@@ -175,7 +176,7 @@ buffer tail. (unsigned 8-bit integer, can map from 0-255)
 */
 
 // See section 0 above.           // 1.1 - max buffer size
-char _rxBuffer[_BUFFER_SIZE];     // 1.2 - buff for incoming
+char _rxBuffer[SDI12_BUFFER_SIZE];     // 1.2 - buff for incoming
 uint8_t _rxBufferHead = 0;        // 1.3 - index of buff head
 uint8_t _rxBufferTail = 0;        // 1.4 - index of buff tail
 
@@ -279,8 +280,8 @@ const char *SDI12::getStateName(uint8_t state)
 // 2.1 - sets the state of the SDI-12 object.
 void SDI12::setState(uint8_t state)
 {
-  IO_REG_TYPE mask = bitmask;
-  volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
+    IO_REG_TYPE mask IO_REG_MASK_ATTR = bitmask;
+    volatile IO_REG_TYPE *reg IO_REG_BASE_ATTR = baseReg;
 
   if(state == HOLDING){
     DIRECT_MODE_OUTPUT(reg, mask);
@@ -460,8 +461,8 @@ recorder for another SDI-12 device
 
 // 4.1 - this function wakes up the entire sensor bus
 void SDI12::wakeSensors(){
-  IO_REG_TYPE mask = bitmask;
-  volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
+  IO_REG_TYPE mask IO_REG_MASK_ATTR = bitmask;
+  volatile IO_REG_TYPE *reg IO_REG_BASE_ATTR = baseReg;
 
   setState(TRANSMITTING);
   DIRECT_WRITE_HIGH(reg, mask);
@@ -473,8 +474,8 @@ void SDI12::wakeSensors(){
 // 4.2 - this function writes a character out on the data line
 void SDI12::writeChar(uint8_t out)
 {
-  IO_REG_TYPE mask = bitmask;
-  volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
+  IO_REG_TYPE mask IO_REG_MASK_ATTR = bitmask;
+  volatile IO_REG_TYPE *reg IO_REG_BASE_ATTR = baseReg;
 
   out |= (parity_even_bit(out)<<7);          // 4.2.1 - parity bit
 
@@ -529,8 +530,8 @@ void SDI12::sendCommand(FlashString cmd)
 //        acting as an SDI-12 device rather than a recorder).
 void SDI12::sendResponse(String &resp)
 {
-  IO_REG_TYPE mask = bitmask;
-  volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
+  IO_REG_TYPE mask IO_REG_MASK_ATTR = bitmask;
+  volatile IO_REG_TYPE *reg IO_REG_BASE_ATTR = baseReg;
 
   setState(TRANSMITTING);   // Get ready to send data to the recorder
   DIRECT_WRITE_LOW(reg, mask);
@@ -543,8 +544,8 @@ void SDI12::sendResponse(String &resp)
 
 void SDI12::sendResponse(const char *resp)
 {
-  IO_REG_TYPE mask = bitmask;
-  volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
+  IO_REG_TYPE mask IO_REG_MASK_ATTR = bitmask;
+  volatile IO_REG_TYPE *reg IO_REG_BASE_ATTR = baseReg;
 
   setState(TRANSMITTING);   // Get ready to send data to the recorder
   DIRECT_WRITE_LOW(reg, mask);
@@ -557,8 +558,8 @@ void SDI12::sendResponse(const char *resp)
 
 void SDI12::sendResponse(FlashString resp)
 {
-  IO_REG_TYPE mask = bitmask;
-  volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
+  IO_REG_TYPE mask IO_REG_MASK_ATTR = bitmask;
+  volatile IO_REG_TYPE *reg IO_REG_BASE_ATTR = baseReg;
 
   setState(TRANSMITTING);   // Get ready to send data to the recorder
   DIRECT_WRITE_LOW(reg, mask);
@@ -575,10 +576,10 @@ void SDI12::sendResponse(FlashString resp)
 characters available in the buffer.
 
 To understand how:
-_rxBufferTail + _BUFFER_SIZE - _rxBufferHead) % _BUFFER_SIZE;
+_rxBufferTail + SDI12_BUFFER_SIZE - _rxBufferHead) % SDI12_BUFFER_SIZE;
 accomplishes this task, we will use a few examples.
 
-To start take the buffer below that has _BUFFER_SIZE = 10. The
+To start take the buffer below that has SDI12_BUFFER_SIZE = 10. The
 message "abc" has been wrapped around (circular buffer).
 
 _rxBufferTail = 1 // points to the '-' after c
@@ -637,7 +638,7 @@ or using the setTimeoutValue(int) function.
 int SDI12::available()
 {
   if(_bufferOverflow) return -1;
-  return (_rxBufferTail + _BUFFER_SIZE - _rxBufferHead) % _BUFFER_SIZE;
+  return (_rxBufferTail + SDI12_BUFFER_SIZE - _rxBufferHead) % SDI12_BUFFER_SIZE;
 }
 
 // 5.2 - reveals the next character in the buffer without consuming
@@ -661,7 +662,7 @@ int SDI12::read()
   _bufferOverflow = false;                             // Reading makes room in the buffer
   if (_rxBufferHead == _rxBufferTail) return -1;       // Empty buffer? If yes, -1
   uint8_t nextChar = _rxBuffer[_rxBufferHead];         // Otherwise, grab char at head
-  _rxBufferHead = (_rxBufferHead + 1) % _BUFFER_SIZE;  // increment head
+  _rxBufferHead = (_rxBufferHead + 1) % SDI12_BUFFER_SIZE;  // increment head
   return nextChar;                                     // return the char
 }
 
@@ -886,7 +887,7 @@ void SDI12::handleInterrupt(){
 void SDI12::receiveChar()
 {
   IO_REG_TYPE mask=bitmask;
-  volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
+  volatile IO_REG_TYPE *reg IO_REG_BASE_ATTR = baseReg;
 
   if (DIRECT_READ(reg, mask))                // 7.2.1 - Start bit?
   {
@@ -908,11 +909,11 @@ void SDI12::receiveChar()
     delayMicroseconds(SPACING);              // 7.2.6 - Skip the stop bit.
 
                                              // 7.2.7 - Overflow? If not, proceed.
-    if ((_rxBufferTail + 1) % _BUFFER_SIZE == _rxBufferHead)
+    if ((_rxBufferTail + 1) % SDI12_BUFFER_SIZE == _rxBufferHead)
     { _bufferOverflow = true;
     } else {                                 // 7.2.8 - Save char, advance tail.
       _rxBuffer[_rxBufferTail] = newChar;
-      _rxBufferTail = (_rxBufferTail + 1) % _BUFFER_SIZE;
+      _rxBufferTail = (_rxBufferTail + 1) % SDI12_BUFFER_SIZE;
     }
   }
 }
