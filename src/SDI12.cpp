@@ -284,6 +284,7 @@ void SDI12::setState(uint8_t state)
   volatile IO_REG_TYPE *reg IO_REG_BASE_ATTR = baseReg;
 
   if(state == HOLDING){
+    DIRECT_MODE_INPUT(reg, mask);   // Pin mode = input
     DIRECT_MODE_OUTPUT(reg, mask);  // Pin mode = output
     DIRECT_WRITE_LOW(reg, mask);    // Pin state = low
     #if defined __AVR__
@@ -297,6 +298,7 @@ void SDI12::setState(uint8_t state)
     return;
   }
   if(state == TRANSMITTING){
+    DIRECT_MODE_INPUT(reg, mask);  // Pin mode = input
     DIRECT_MODE_OUTPUT(reg, mask);  // Pin mode = output
     noInterrupts();                 // _ALL_ interrupts disabled
     return;
