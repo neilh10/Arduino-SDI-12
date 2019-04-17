@@ -168,8 +168,10 @@ SDI12Timer::SDI12Timer(){}
         // Select generic clock generator 4 (Arduino core uses 0-3)
         // Most examples use this clock generator.. consider yourself warned!
         // I would use a higher clock number, but some of the cores don't include them for some reason
+        #if !defined(__SAMD51__)
         REG_GCLK_GENDIV = GCLK_GENDIV_ID(4) |           // Select Generic Clock Generator 4
                           GCLK_GENDIV_DIV(3) ;          // Divide the 48MHz clock source by divisor 3: 48MHz/3=16MHz
+
         while (GCLK->STATUS.bit.SYNCBUSY);              // Wait for synchronization
 
         // Write the generic clock generator 5 configuration
@@ -190,6 +192,10 @@ SDI12Timer::SDI12Timer(){}
                          TC_CTRLA_MODE_COUNT8 |         // Put the timer TC4 into 8-bit mode
                          TC_CTRLA_ENABLE;               // Enable TC4
         while (TC4->COUNT16.STATUS.bit.SYNCBUSY);       // Wait for synchronization
+        #else
+        #warning Need to check SDI12 clock sources, M4?120MHz? M0?48Mhz? possibly reference UART
+        /* Check: No GCLK required for D51_E5x RTC module */
+        #endif // defined(__SAMD51__)    
     }
     void SDI12Timer::resetSDI12TimerPrescale(void){}  // NOT resetting the SAMD timers
 
