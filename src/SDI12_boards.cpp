@@ -212,7 +212,7 @@ void SDI12Timer::configSDI12TimerPrescale(void) {
   // Many examples use clock generator 4.. consider yourself warned!
   // I would use a higher clock number, but some of the cores don't include them for
   // some reason
-        #if !defined(__SAMD51__)
+#if !defined(__SAMD51__)
   REG_GCLK_GENDIV = GCLK_GENDIV_ID(4) |  // Select Generic Clock Generator 4
     GCLK_GENDIV_DIV(3);                  // Divide the clock source by divisor 3
   while (GCLK->STATUS.bit.SYNCBUSY) {}   // Wait for synchronization
@@ -243,10 +243,10 @@ void SDI12Timer::configSDI12TimerPrescale(void) {
     TC_CTRLA_MODE_COUNT8 |        // Put the timer TC3 into 8-bit mode
     TC_CTRLA_ENABLE;              // Enable TC3
   while (TC3->COUNT16.STATUS.bit.SYNCBUSY) {}  // Wait for synchronization
-        #else
-        #warning Need to check SDI12 clock sources, M4?120MHz? M0?48Mhz? possibly reference UART
-        /* Check: No GCLK required for D51_E5x RTC module */
-        #endif // defined(__SAMD51__)    
+#else
+#warning Need to check SDI12 clock sources, M4?120MHz? M0?48Mhz? possibly reference UART
+/* Check: No GCLK required for D51_E5x RTC module */
+#endif  // defined(__SAMD51__)
 }
 // NOT resetting the SAMD timer settings
 void SDI12Timer::resetSDI12TimerPrescale(void) {
