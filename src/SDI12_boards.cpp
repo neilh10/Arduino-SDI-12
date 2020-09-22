@@ -252,6 +252,7 @@ void SDI12Timer::configSDI12TimerPrescale(void) {
 }
 // NOT resetting the SAMD timer settings
 void SDI12Timer::resetSDI12TimerPrescale(void) {
+  #if !defined(__SAMD51__)
   // Disable TCx
   TC3->COUNT16.CTRLA.reg &= ~TC_CTRLA_ENABLE;
   while (TC3->COUNT16.STATUS.bit.SYNCBUSY) {}
@@ -265,6 +266,10 @@ void SDI12Timer::resetSDI12TimerPrescale(void) {
   REG_GCLK_GENCTRL = GCLK_GENCTRL_ID(4) &  // Select GCLK4
     ~GCLK_GENCTRL_GENEN;                   // Disable the generic clock control
   while (GCLK->STATUS.bit.SYNCBUSY) {}     // Wait for synchronization
+  #else
+#warning Need to check SDI12 clock sources, M4?120MHz? M0?48Mhz? possibly reference UART
+/* Check: No GCLK required for D51_E5x RTC module */
+#endif  // defined(__SAMD51__)
 }
 
 // Espressif ESP32/ESP8266 boards
