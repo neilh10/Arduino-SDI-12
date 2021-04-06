@@ -891,14 +891,14 @@ class SDI12 : public Stream {
    *
    * @param extraWakeTime The amount of additional time in milliseconds that the sensor
    * takes to wake before being ready to receive a command.  Default is 0ms - meaning
-   * the sensor is ready for a command by the end of the 12ms break.  Per protocol, the
-   * wake time must be less than 100 ms.
+   * the sensor is ready for a command by the end of the 12ms break.  Should be lower
+   * than 100.
    */
-  void sendCommand(String& cmd, int8_t extraWakeTime = 10);
-  /// @copydoc SDI12::sendCommand(String&, int8_t)
-  void sendCommand(const char* cmd, int8_t extraWakeTime = 10);
-  /// @copydoc SDI12::sendCommand(String&, int8_t)
-  void sendCommand(FlashString cmd, int8_t extraWakeTime = 10);
+  void sendCommand(String& cmd, int8_t extraWakeTime = 0);
+  /// @copydoc SDI12::sendCommand(String& cmd, int8_t extraWakeTime = 0)
+  void sendCommand(const char* cmd, int8_t extraWakeTime = 0);
+  /// @copydoc SDI12::sendCommand(String& cmd, int8_t extraWakeTime = 0)
+  void sendCommand(FlashString cmd, int8_t extraWakeTime = 0);
 
   /**
    * @brief Send a response out on the data line (for slave use)
