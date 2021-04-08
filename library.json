@@ -1,8 +1,8 @@
 {
   "name": "SDI-12nh",
-  "version": "2.1.4-1",
-  "keywords": "SDI-12, sdi12, communication, bus, sensor, Decagon",
-  "description": "An Arduino library for SDI-12 communication with a wide variety of environmental sensors.",
+  "version": "2.1.4-LT5a",
+  "keywords": "SDI-12, sdi12, communication, bus, sensor, Insitu Level Troll, LT500",
+  "description": "A Forked SDI-12 communication library from enviroDIY/Arduino-SDI-12.",
   "repository": {
     "type": "git",
     "url": "https://github.com/neilh10/Arduino-SDI-12#release1"

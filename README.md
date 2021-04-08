@@ -13,6 +13,12 @@ It provides a general software solution, without requiring any additional hardwa
 
 This work is motivated by the [EnviroDIY community](http://envirodiy.org/) vision to create an open source hardware and software stack to deliver near real time environmental data from wireless sensor networks, such as the Arduino-compatible [EnviroDIY™ Mayfly Data Logger](http://envirodiy.org/mayfly/).
 
+## Version 2.1.4-LT5a
+Numbering based on https://semver.org/   
+ 2.1.4-LT5a has a change at the lower level protocol level for LT500 https://github.com/neilh10/ModularSensors/issues/32    
+ Changed name of library.json, as couldn't get it to differentiate between version at platformio, and direct reference github.com/neilh10/Arduino-SDI-12#release1 
+
+
 [//]: # ( Start GitHub Only )
 ## Documentation
 
