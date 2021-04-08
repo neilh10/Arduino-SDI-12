@@ -1,8 +1,8 @@
 {
   "name": "SDI-12nh",
-  "version": "2.1.4-LT5a",
+  "version": "2.1.3-LT5a",
   "keywords": "SDI-12, sdi12, communication, bus, sensor, Insitu Level Troll, LT500",
-  "description": "A Forked SDI-12 communication library from enviroDIY/Arduino-SDI-12.",
+  "description": "A Forked SDI-12 communication library from enviroDIY/Arduino-SDI-12. Version is update from enviroDIY/Arduino-SDI-12 in sperate fork",
   "repository": {
     "type": "git",
     "url": "https://github.com/neilh10/Arduino-SDI-12#release1"
